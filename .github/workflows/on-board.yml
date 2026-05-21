@@ -77,9 +77,6 @@ jobs:
           path: templates-repo
           repository: rokesh-org/core-infra
 
-      - name: tree folder
-        run : sudo apt install tree && tree . 
-
       - name: Check template directory exists
         run: |
           if [ ! -d "templates-repo/template-files" ]; then
@@ -100,6 +97,9 @@ jobs:
         with:
           path: templates-repo
           repository: rokesh-org/core-infra
+
+      - name: tree folder
+        run : sudo apt install tree && tree . 
 
       - name: Setup API CI
         id: setup-api
