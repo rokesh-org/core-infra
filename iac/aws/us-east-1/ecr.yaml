@@ -1,0 +1,16 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ECR Stack - function-manager repository
+
+Resources:
+  SampleECRStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://abc.cf.ecs.template.nonprod.s3.us-east-1.amazonaws.com/templates/ecr.yaml
+      Parameters:
+        Environment: dev
+        RepoName: function-manager
+      Tags:
+        - Key: Environment
+          Value: dev
+        - Key: ManagedBy
+          Value: CloudFormation

@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: IAM Managed Policy Stack for Application containers
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - qa
+      - stage
+      - prod
+    Description: Deployment environment
+
+Resources:
+  SampleIAMPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub ${Environment}-function-manager-policy
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowReadSecrets
+            Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+              - secretsmanager:DescribeSecret
+            Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${Environment}/function-manager*
+
+          - Sid: AllowS3AccessToAppBucket
+            Effect: Allow
+            Action:
+              - s3:ListBucket
+              - s3:PutObject
+              - s3:GetObject
+              - s3:DeleteObject
+            Resource: !Sub arn:aws:s3:::${Environment}-function-manager*
+
+          - Sid: AllowCloudWatchLogsWrite
+            Effect: Allow
+            Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/ecs/${Environment}/function-manager*
+
+  SSMSamplePolicyArn:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /cfn/${Environment}/iam/function-manager/PolicyArn
+      Type: String
+      Value: !Ref SampleIAMPolicy
+      Description: !Sub "[${Environment}] Managed Policy ARN for function-manager"
+      Tags:
+        Environment: !Ref Environment
+        AppName: function-manager
+        ManagedBy: CloudFormation

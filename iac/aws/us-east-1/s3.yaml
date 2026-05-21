@@ -1,0 +1,16 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: S3 Stack - sample application bucket
+
+Resources:
+  SampleS3Stack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://abc.cf.ecs.template.nonprod.s3.us-east-1.amazonaws.com/templates/s3.yaml
+      Parameters:
+        Environment: dev
+        AppName: sample
+      Tags:
+        - Key: Environment
+          Value: dev
+        - Key: ManagedBy
+          Value: CloudFormation

@@ -1,0 +1,22 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ECS Cluster - Deploys ECS Cluster backed by EC2 ASG
+Resources:
+  ECSStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://abc.cf.ecs.template.nonprod.s3.us-east-1.amazonaws.com/templates/ecs.yaml
+      Parameters:
+        Environment: dev
+        VpcId: '{{resolve:ssm:/cfn/vpc/VpcId}}'
+        PrivateSubnet1: '{{resolve:ssm:/cfn/vpc/PrivateSubnet1}}'
+        PrivateSubnet2: '{{resolve:ssm:/cfn/vpc/PrivateSubnet2}}'
+        KeyPairName: dev-ecs-keypair
+        InstanceType: t4g.medium
+        ALBSecurityGroup: '{{resolve:ssm:/cfn/dev/alb/SecurityGroupId}}'
+        AmiId: ami-0a9eef82780017c25 # Amazon Linux 2023 ARM64
+      Tags:
+        - Key: Environment
+          Value: dev
+        - Key: ManagedBy
+          Value: CloudFormation
+

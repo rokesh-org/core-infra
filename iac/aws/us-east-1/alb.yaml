@@ -1,0 +1,19 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ALB Stack - Deploy Internal Application Load Balancer
+
+Resources:
+  ALBStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://abc.cf.ecs.template.nonprod.s3.us-east-1.amazonaws.com/templates/alb.yaml
+      Parameters:
+        Environment: dev
+        VpcId: '{{resolve:ssm:/cfn/vpc/VpcId}}'
+        PrivateSubnet1: '{{resolve:ssm:/cfn/vpc/PrivateSubnet1}}'
+        PrivateSubnet2: '{{resolve:ssm:/cfn/vpc/PrivateSubnet2}}'
+      Tags:
+        - Key: Environment
+          Value: dev
+        - Key: ManagedBy
+          Value: CloudFormation
+
