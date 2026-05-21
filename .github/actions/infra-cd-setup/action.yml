@@ -42,6 +42,7 @@ runs:
         ref: main
         path: infra-repo
         token: ${{ inputs.gh-token }}
+        persist-credentials: false
 
     - name: Ensure and checkout environment branch
       shell: bash
