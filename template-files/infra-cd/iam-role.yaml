@@ -1,0 +1,15 @@
+
+  # ── __CF_APP_NAME__ IAM Task Stack ─────────────────────────────────────────
+  __CF_APP_NAME__IAMTaskStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://rpx.cf.ecs.template.nonprod.s3.us-east-1.amazonaws.com/templates/iam-task.yaml
+      Parameters:
+        Environment: !Ref Environment
+        AppName: __APP_NAME__
+        AppPolicyArn: !Sub '{{resolve:ssm:/cfn/__ENVIRONMENT__/iam/__APP_NAME__/PolicyArn:1}}'
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ManagedBy
+          Value: CloudFormation

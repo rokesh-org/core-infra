@@ -1,0 +1,43 @@
+
+  # ── __CF_APP_NAME__ IAM Policy ─────────────────────────────────────────
+  __CF_APP_NAME__IAMPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub ${Environment}-__APP_NAME__-policy
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowReadSecrets
+            Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+              - secretsmanager:DescribeSecret
+            Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${Environment}/__APP_NAME__*
+
+          - Sid: AllowS3AccessToAppBucket
+            Effect: Allow
+            Action:
+              - s3:ListBucket
+              - s3:PutObject
+              - s3:GetObject
+              - s3:DeleteObject
+            Resource: !Sub arn:aws:s3:::${Environment}-__APP_NAME__*
+
+          - Sid: AllowCloudWatchLogsWrite
+            Effect: Allow
+            Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/ecs/${Environment}/__APP_NAME__*
+
+  SSM__APP_NAME__PolicyArn:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /cfn/${Environment}/iam/__APP_NAME__/PolicyArn
+      Type: String
+      Value: !Ref __CF_APP_NAME__IAMPolicy
+      Description: !Sub "[${Environment}] Managed Policy ARN for __APP_NAME__"
+      Tags:
+        Environment: !Ref Environment
+        AppName: __APP_NAME__
+        ManagedBy: CloudFormation

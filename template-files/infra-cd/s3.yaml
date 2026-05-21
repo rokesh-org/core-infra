@@ -1,0 +1,14 @@
+
+  # ── __CF_APP_NAME__ S3 Stack ─────────────────────────────────────────
+  __CF_APP_NAME__S3Stack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://rpx.cf.ecs.template.nonprod.s3.us-east-1.amazonaws.com/templates/s3.yaml
+      Parameters:
+        Environment: __ENVIRONMENT__
+        AppName: __APP_NAME__
+      Tags:
+        - Key: Environment
+          Value: __ENVIRONMENT__
+        - Key: ManagedBy
+          Value: CloudFormation

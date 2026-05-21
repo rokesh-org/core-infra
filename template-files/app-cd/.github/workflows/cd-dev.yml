@@ -1,0 +1,20 @@
+name: CD - Deploy to dev
+
+on:
+  push:
+    branches: [__ENVIRONMENT__-i]
+    paths:
+      - 'api-config.json'
+      - 'ui-config.json'
+      
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy-dev:
+    uses: rpx/github_shared_templates/.github/workflows/cd-workflow.yaml@main
+    with:
+      environment: "__ENVIRONMENT__"
+      stacks-path: "iac/aws/us-east-1"
+      app-name:    "__APP_NAME__"      

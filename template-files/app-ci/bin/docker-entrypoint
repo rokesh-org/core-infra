@@ -1,0 +1,21 @@
+#!/bin/bash -e
+
+AWS_REGION="${AWS_REGION:-us-east-1}"
+SECRET_NAME="__ENVIRONMENT__/__APP_NAME__"
+
+echo "[entrypoint] Loading config from Secrets Manager: ${SECRET_NAME}"
+
+json=$(aws secretsmanager get-secret-value \
+  --secret-id "${SECRET_NAME}" \
+  --region "${AWS_REGION}" \
+  --query 'SecretString' \
+  --output text)
+
+while IFS='=' read -r key value; do
+  export "${key}=${value}"
+  echo "[entrypoint] Exported: ${key}"
+done < <(echo "$json" | jq -r 'to_entries[] | .key + "=" + (.value | tostring)')
+
+ln -sf /dev/stdout /rails/log/$RAILS_ENV.log
+
+exec "${@}"

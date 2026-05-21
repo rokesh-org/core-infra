@@ -1,0 +1,14 @@
+
+  # ── __CF_APP_NAME__ ECR Stack ─────────────────────────────────────────
+  __CF_APP_NAME__ECRStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://rpx.cf.ecs.template.nonprod.s3.us-east-1.amazonaws.com/templates/ecr.yaml
+      Parameters:
+        Environment: __ENVIRONMENT__
+        RepoName: __APP_NAME__
+      Tags:
+        - Key: Environment
+          Value: __ENVIRONMENT__
+        - Key: ManagedBy
+          Value: CloudFormation

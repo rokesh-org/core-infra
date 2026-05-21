@@ -1,0 +1,130 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Child Task Definition and ECS Service for __APP_NAME__-__TYPE__ with rolling update deployment'
+
+# ─── Parameters ───────────────────────────────────────────────────────────────
+Parameters:
+  # ─────── General ───────
+  ECSClusterName:
+    Type: String
+    Default: '{{resolve:ssm:/cfn/__ENVIRONMENT__/ecs/ClusterName:1}}'
+  Image:
+    Type: String
+  Environment:
+    Type: String
+    Default: __ENVIRONMENT__
+  TemplateBucketUrl:
+    Type: String
+    Default: https://rpx.cf.ecs.template.nonprod.s3.us-east-1.amazonaws.com/templates
+  Namespace:
+    Type: String
+    Default: '{{resolve:ssm:/cfn/__ENVIRONMENT__/servicediscovery/NamespaceArn:1}}'
+
+  # ─────── Application ───────
+  AppName:
+    Type: String
+    Default: __APP_NAME__-__TYPE__
+  ContainerPort:
+    Type: Number
+    Default: 9201
+  TaskCPU:
+    Type: Number
+    Default: 512
+  TaskMemory:
+    Type: Number
+    Default: 1024
+  HealthCheckHttpCode:
+    Type: String
+    Default: '200'  
+  __APP_NAME__IAMRoleArn:
+    Type: String
+    Default: '{{resolve:ssm:/cfn/__ENVIRONMENT__/iam/__APP_NAME__/TaskRoleArn:1}}'
+  ExecutionRoleArn:
+    Type: String
+    Default: '{{resolve:ssm:/cfn/__ENVIRONMENT__/ecs/TaskExecutionRoleArn:1}}'
+
+  # ─────── Networking ───────
+  VpcId:
+    Type: String
+    Default: '{{resolve:ssm:/cfn/vpc/VpcId:1}}'
+  PrivateSubnet1:
+    Type: String
+    Default: '{{resolve:ssm:/cfn/vpc/PrivateSubnet1:1}}'
+  PrivateSubnet2:
+    Type: String
+    Default: '{{resolve:ssm:/cfn/vpc/PrivateSubnet2:1}}'
+  SecurityGroupId:
+    Type: String
+    Default: '{{resolve:ssm:/cfn/__ENVIRONMENT__/ecs/InstanceSecurityGroupId:1}}'
+
+  # ─────── Scaling ───────
+  DesiredCount:
+    Type: Number
+    Default: 1
+  ScalingMinCapacity:
+    Type: Number
+    Default: 1
+  ScalingMaxCapacity:
+    Type: Number
+    Default: 2
+  CPUScaleOutThreshold:
+    Type: Number
+    Default: 80
+  CPUScaleInThreshold:
+    Type: Number
+    Default: 40
+  MemoryScaleOutThreshold:
+    Type: Number
+    Default: 80
+  MemoryScaleInThreshold:
+    Type: Number
+    Default: 80
+
+# ─── Resources ────────────────────────────────────────────────────────────────
+Resources:
+  # ─────── Task Definition ───────────────
+  __APP_NAME____TYPE__TaskDefStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub '${TemplateBucketUrl}/task-definition.yaml'
+      Parameters:
+        Environment: !Ref Environment
+        AppName: !Ref AppName
+        Image: !Ref Image
+        ContainerPort: !Ref ContainerPort
+        TaskCPU: !Ref TaskCPU
+        TaskMemory: !Ref TaskMemory
+        TaskRoleArn: !Ref __APP_NAME__IAMRoleArn
+        ExecutionRoleArn: !Ref ExecutionRoleArn
+
+  # ─────── ECS Service ──────────────
+  __APP_NAME__ECSServiceStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: __APP_NAME____TYPE__TaskDefStack
+    Properties:
+      TemplateURL: !Sub '${TemplateBucketUrl}/ecs-service-rolling-update.yaml'
+      Parameters:
+        Environment: !Ref Environment
+        AppName: !Ref AppName
+        ECSClusterName: !Ref ECSClusterName
+        Namespace: !Ref Namespace
+        TaskDefinitionArn: !GetAtt __APP_NAME____TYPE__TaskDefStack.Outputs.TaskDefinitionArn
+        VpcId: !Ref VpcId
+        VpcSubnetIds: !Sub '${PrivateSubnet1},${PrivateSubnet2}'
+        SecurityGroupIds: !Ref SecurityGroupId
+        ContainerName: !Ref AppName
+        ContainerPort: !Ref ContainerPort
+        HealthCheckHttpCode: !Ref HealthCheckHttpCode
+        DesiredCount: !Ref DesiredCount
+        ScalingMinCapacity: !Ref ScalingMinCapacity
+        ScalingMaxCapacity: !Ref ScalingMaxCapacity
+        CPUScaleOutThreshold: !Ref CPUScaleOutThreshold
+        CPUScaleInThreshold: !Ref CPUScaleInThreshold
+        MemoryScaleOutThreshold: !Ref MemoryScaleOutThreshold
+        MemoryScaleInThreshold: !Ref MemoryScaleInThreshold
+      Tags:
+        - Key: Name
+          Value: !Sub '${Environment}-${AppName}-service'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ManagedBy
+          Value: CloudFormation

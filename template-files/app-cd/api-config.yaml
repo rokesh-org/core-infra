@@ -1,0 +1,6 @@
+[
+  {
+    "ParameterKey": "Image",
+    "ParameterValue": "506784935479.dkr.ecr.us-east-1.amazonaws.com/__ENVIRONMENT__-__APP_NAME__:__TYPE__.<BUILD_TAG>"
+  }
+]
