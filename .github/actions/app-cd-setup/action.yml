@@ -54,11 +54,10 @@ runs:
         git fetch origin
         git checkout ${{ inputs.environment-branch }}
 
-    - name: Create CD onboarding branch and setup files
+    - name: Setup CD onboarding files
       shell: bash
       run: |
         cd app-cd-repo
-        git checkout -b ${{ inputs.environment-branch }}-on-board
         rm -rf ./* ./.*  2>/dev/null || true
         rsync -av --exclude='.git' ${{ inputs.templates-path }}/template-files/app-cd/ .
 

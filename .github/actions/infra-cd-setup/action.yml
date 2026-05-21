@@ -54,11 +54,10 @@ runs:
         git fetch origin
         git checkout ${{ inputs.environment-branch }}
 
-    - name: Create infrastructure onboarding branch
+    - name: Setup infrastructure onboarding files
       shell: bash
       run: |
         cd infra-repo
-        git checkout -b infra/${{ inputs.environment-branch }}/${{ inputs.app-name }}
         mkdir -p iac/aws/us-east-1
 
     - name: Process infrastructure templates and placeholders
