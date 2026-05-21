@@ -58,7 +58,8 @@ runs:
       shell: bash
       run: |
         cd app-cd-repo
-        rm -rf ./* ./.*  2>/dev/null || true
+        find . -maxdepth 1 -type f ! -name '.gitignore' -delete
+        find . -maxdepth 1 -type d ! -name '.' ! -name '..' ! -name '.git' -exec rm -rf {} + 2>/dev/null || true
         rsync -av --exclude='.git' ${{ inputs.templates-path }}/template-files/app-cd/ .
 
     - name: Replace placeholders
