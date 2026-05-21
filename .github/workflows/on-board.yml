@@ -103,7 +103,7 @@ jobs:
 
       - name: Setup API CI
         id: setup-api
-        uses: ./.github/actions/app-ci-setup
+        uses: ./templates-repo/.github/actions/app-ci-setup
         with:
           app-name: ${{ github.event.inputs.AppName }}
           repo-name: ${{ github.event.inputs.RepoName }}
@@ -129,7 +129,7 @@ jobs:
 
       - name: Setup UI CI
         id: setup-ui
-        uses: ./.github/actions/app-ci-setup
+        uses: ./templates-repo/.github/actions/app-ci-setup
         with:
           app-name: ${{ github.event.inputs.AppName }}
           repo-name: ${{ github.event.inputs.RepoName }}
@@ -156,7 +156,7 @@ jobs:
 
       - name: Setup Application CD
         id: setup-cd
-        uses: ./.github/actions/app-cd-setup
+        uses: ./templates-repo/.github/actions/app-cd-setup
         with:
           app-name: ${{ github.event.inputs.AppName }}
           repo-name: ${{ github.event.inputs.RepoName }}
@@ -181,7 +181,7 @@ jobs:
 
       - name: Setup Infrastructure CD
         id: setup-infra
-        uses: ./.github/actions/infra-cd-setup
+        uses: ./templates-repo/.github/actions/infra-cd-setup
         with:
           app-name: ${{ github.event.inputs.AppName }}
           repo-name: ${{ github.event.inputs.RepoName }}
