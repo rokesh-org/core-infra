@@ -1,0 +1,224 @@
+name: Application Onboarding
+
+on:
+  workflow_dispatch:
+    inputs:
+      RepoName:
+        description: 'Repository name'
+        required: true
+        type: string
+      AppName:
+        description: 'Application name'
+        required: true
+        type: string
+      Environment:
+        description: 'Environment (dev, qa, stage, prod)'
+        required: true
+        type: choice
+        options:
+          - dev
+          - qa
+          - stage
+          - prod      
+      EnvironmentBranch:
+        description: 'Environment (dev-i, qa-i, stage-i, prod-i)'
+        required: true
+        type: choice
+        options:
+          - dev-i
+          - qa-i
+          - stage-i
+          - prod-i
+      APIBranchName:
+        description: 'API branch name (source branch for API CI)'
+        required: true
+        type: string
+      APITargetBranchName:
+        description: 'API target branch name (target branch for API CI PR)'
+        required: true
+        type: string
+      UIBranchName:
+        description: 'UI branch name (source branch for UI CI, optional)'
+        required: false
+        type: string
+      UITargetBranchName:
+        description: 'UI target branch name (target branch for UI CI PR, optional)'
+        required: false
+        type: string
+
+env:
+  GH_TOKEN: ${{ secrets.GIT_ACCESS_TOKEN }}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  # Validation Job
+  validate-inputs:
+    name: Validate Inputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate environment
+        run: |
+          case "${{ github.event.inputs.EnvironmentBranch }}" in
+            dev-i|qa-i|stage-i|prod-i)
+              echo "✓ Valid environment: ${{ github.event.inputs.EnvironmentBranch }}"
+              ;;
+            *)
+              echo "✗ Invalid environment: ${{ github.event.inputs.EnvironmentBranch }}"
+              exit 1
+              ;;
+          esac
+
+      - name: Checkout current repository for templates
+        uses: actions/checkout@v4
+        with:
+          path: templates-repo
+
+      - name: Check template directory exists
+        run: |
+          if [ ! -d "templates-repo/template-files" ]; then
+            echo "✗ Template directory not found: templates-repo/template-files"
+            exit 1
+          fi
+          echo "✓ Template directory found"
+
+  # Job 1: Application CI Onboard
+  app-ci-job:
+    name: App CI - Setup API Pipeline
+    needs: validate-inputs
+    runs-on: ubuntu-latest
+    outputs:
+      api-pr-url: ${{ steps.setup-api.outputs.pr-url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          path: templates-repo
+
+      - name: Setup API CI
+        id: setup-api
+        uses: ./.github/actions/app-ci-setup
+        with:
+          app-name: ${{ github.event.inputs.AppName }}
+          repo-name: ${{ github.event.inputs.RepoName }}
+          environment: ${{ github.event.inputs.Environment }}
+          environment-branch: ${{ github.event.inputs.EnvironmentBranch }}
+          api-branch-name: ${{ github.event.inputs.APIBranchName }}
+          api-target-branch-name: ${{ github.event.inputs.APITargetBranchName }}
+          templates-path: ${{ github.workspace }}/templates-repo
+          gh-token: ${{ secrets.GIT_ACCESS_TOKEN }}
+
+  # Job 1B: Application CI UI Onboard (Optional)
+  app-ci-ui-job:
+    name: App CI - Setup UI Pipeline
+    needs: validate-inputs
+    if: github.event.inputs.UIBranchName != ''
+    runs-on: ubuntu-latest
+    outputs:
+      ui-pr-url: ${{ steps.setup-ui.outputs.pr-url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          path: templates-repo
+
+      - name: Setup UI CI
+        id: setup-ui
+        uses: ./.github/actions/app-ci-ui-setup
+        with:
+          app-name: ${{ github.event.inputs.AppName }}
+          repo-name: ${{ github.event.inputs.RepoName }}
+          environment: ${{ github.event.inputs.Environment }}
+          ui-branch-name: ${{ github.event.inputs.UIBranchName }}
+          ui-target-branch-name: ${{ github.event.inputs.UITargetBranchName }}
+          templates-path: ${{ github.workspace }}/templates-repo
+          gh-token: ${{ secrets.GIT_ACCESS_TOKEN }}
+
+  # Job 2: Application CD Onboard
+  app-cd-job:
+    name: App CD - Setup Deployment Pipeline
+    needs: [validate-inputs, app-ci-job]
+    runs-on: ubuntu-latest
+    outputs:
+      cd-pr-url: ${{ steps.setup-cd.outputs.pr-url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          path: templates-repo
+
+      - name: Setup Application CD
+        id: setup-cd
+        uses: ./.github/actions/app-cd-setup
+        with:
+          app-name: ${{ github.event.inputs.AppName }}
+          repo-name: ${{ github.event.inputs.RepoName }}
+          environment: ${{ github.event.inputs.Environment }}
+          environment-branch: ${{ github.event.inputs.EnvironmentBranch }}
+          templates-path: ${{ github.workspace }}/templates-repo
+          gh-token: ${{ secrets.GIT_ACCESS_TOKEN }}
+
+  # Job 3: Infrastructure CD Onboard
+  infra-cd-job:
+    name: Infra CD - Setup Infrastructure
+    needs: [validate-inputs, app-cd-job]
+    runs-on: ubuntu-latest
+    outputs:
+      infra-pr-url: ${{ steps.setup-infra.outputs.pr-url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          path: templates-repo
+
+      - name: Setup Infrastructure CD
+        id: setup-infra
+        uses: ./.github/actions/infra-cd-setup
+        with:
+          app-name: ${{ github.event.inputs.AppName }}
+          repo-name: ${{ github.event.inputs.RepoName }}
+          environment: ${{ github.event.inputs.Environment }}
+          environment-branch: ${{ github.event.inputs.EnvironmentBranch }}
+          templates-path: ${{ github.workspace }}/templates-repo
+          gh-token: ${{ secrets.GIT_ACCESS_TOKEN }}
+
+  # Summary Job
+  onboarding-summary:
+    name: Onboarding Summary
+    needs: [app-ci-job, app-ci-ui-job, app-cd-job, infra-cd-job]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Print Onboarding Summary
+        run: |
+          echo "╔════════════════════════════════════════════════════════════════╗"
+          echo "║          APPLICATION ONBOARDING WORKFLOW COMPLETED             ║"
+          echo "╚════════════════════════════════════════════════════════════════╝"
+          echo ""
+          echo "📋 Application Details:"
+          echo "  • Application Name: ${{ github.event.inputs.AppName }}"
+          echo "  • Repository: ${{ github.event.inputs.RepoName }}"
+          echo "  • Environment: ${{ github.event.inputs.Environment }}"
+          echo ""
+          echo "✅ CI Onboarding:"
+          echo "  • API PR: ${{ needs.app-ci-job.outputs.api-pr-url }}"
+          if [ "${{ needs.app-ci-ui-job.result }}" != "skipped" ]; then
+            echo "  • UI PR: ${{ needs.app-ci-ui-job.outputs.ui-pr-url }}"
+          fi
+          echo ""
+          echo "✅ CD Onboarding:"
+          echo "  • CD PR: ${{ needs.app-cd-job.outputs.cd-pr-url }}"
+          echo ""
+          echo "✅ Infrastructure Onboarding:"
+          echo "  • Infra PR: ${{ needs.infra-cd-job.outputs.infra-pr-url }}"
+          echo ""
+          echo "📝 Next Steps:"
+          echo "  1. Review all Pull Requests"
+          echo "  2. Verify CI/CD pipeline configurations"
+          echo "  3. Validate infrastructure templates"
+          echo "  4. Merge PRs after approval"
+          echo "  5. Monitor deployment pipeline"
+          echo ""
+          echo "ℹ️  For more information, visit the PRs created above."

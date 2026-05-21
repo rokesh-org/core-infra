@@ -1,0 +1,180 @@
+name: 'Infrastructure CD Setup'
+description: 'Setup infrastructure CD deployment for core_infrastructure repository'
+
+inputs:
+  app-name:
+    description: 'Application name'
+    required: true
+  repo-name:
+    description: 'Repository name'
+    required: true
+  environment:
+    description: 'Environment (dev-i, qa-i, stage-i, prod-i)'
+    required: true
+  templates-path:
+    description: 'Path to templates repository'
+    required: true
+  gh-token:
+    description: 'GitHub token for authentication'
+    required: true
+
+outputs:
+  pr-url:
+    description: 'Pull Request URL'
+    value: ${{ steps.create-pr.outputs.pr-url }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup git configuration
+      shell: bash
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+    - name: Checkout core_infrastructure repository
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ github.repository_owner }}/core_infrastructure
+        ref: main
+        path: infra-repo
+        token: ${{ inputs.gh-token }}
+
+    - name: Check if infrastructure environment branch exists
+      id: check-infra-branch
+      shell: bash
+      run: |
+        cd infra-repo
+        if git ls-remote --heads origin ${{ inputs.environment }} | grep -q .; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+          echo "✓ Infrastructure environment branch exists: ${{ inputs.environment }}"
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+          echo "⚠ Infrastructure environment branch does not exist: ${{ inputs.environment }}"
+        fi
+
+    - name: Create infrastructure environment branch if not exists
+      if: steps.check-infra-branch.outputs.exists == 'false'
+      shell: bash
+      run: |
+        cd infra-repo
+        git checkout -b ${{ inputs.environment }}
+        git push origin ${{ inputs.environment }}
+        echo "✓ Created infrastructure environment branch: ${{ inputs.environment }}"
+
+    - name: Checkout infrastructure environment branch
+      shell: bash
+      run: |
+        cd infra-repo
+        git fetch origin
+        git checkout ${{ inputs.environment }}
+        echo "✓ Checked out infrastructure environment branch"
+
+    - name: Create infrastructure onboarding branch
+      shell: bash
+      run: |
+        cd infra-repo
+        git checkout -b infra/${{ inputs.environment }}/${{ inputs.app-name }}
+        echo "✓ Created branch: infra/${{ inputs.environment }}/${{ inputs.app-name }}"
+
+    - name: Ensure infrastructure directory structure
+      shell: bash
+      run: |
+        cd infra-repo
+        mkdir -p iac/aws/us-east-1
+        echo "✓ Ensured directory structure"
+
+    - name: Process infrastructure templates
+      shell: bash
+      run: |
+        cd infra-repo
+        
+        # Define template files to process
+        TEMPLATES=("ecr.yaml" "iam-policy.yaml" "iam-role.yaml" "route53.yaml" "s3.yaml" "secret-manager.yaml")
+        
+        for template in "${TEMPLATES[@]}"; do
+          source_file="${{ inputs.templates-path }}/template-files/infra-cd/${template}"
+          target_file="iac/aws/us-east-1/${template}"
+          
+          if [ -f "${source_file}" ]; then
+            echo "Processing: ${template}"
+            # Create target file if it doesn't exist
+            if [ ! -f "${target_file}" ]; then
+              cp "${source_file}" "${target_file}"
+            else
+              # Append to target file
+              cat "${source_file}" >> "${target_file}"
+            fi
+          else
+            echo "⚠ Template not found: ${source_file}"
+          fi
+        done
+        
+        echo "✓ Processed infrastructure templates"
+
+    - name: Replace placeholders in infrastructure files
+      shell: bash
+      run: |
+        cd infra-repo
+        find iac/aws/us-east-1 -type f -name '*.yaml' -exec sed -i "s|__APP_NAME__|${{ inputs.app-name }}|g" {} +
+        find iac/aws/us-east-1 -type f -name '*.yaml' -exec sed -i "s|__CF_APP_NAME__|$(echo ${{ inputs.app-name }} | sed 's/-//g')|g" {} +
+        find iac/aws/us-east-1 -type f -name '*.yaml' -exec sed -i "s|__ENVIRONMENT__|${{ inputs.environment }}|g" {} +
+        find iac/aws/us-east-1 -type f -name '*.yaml' -exec sed -i "s|__REPO_NAME__|${{ inputs.repo-name }}|g" {} +
+        echo "✓ Placeholders replaced in infrastructure files"
+
+    - name: Commit infrastructure changes
+      shell: bash
+      run: |
+        cd infra-repo
+        git add .
+        git commit -m "feat(infra): onboard ${{ inputs.app-name }} infrastructure" || echo "No changes to commit"
+        echo "✓ Committed infrastructure changes"
+
+    - name: Push infrastructure onboarding branch
+      shell: bash
+      run: |
+        cd infra-repo
+        git push origin infra/${{ inputs.environment }}/${{ inputs.app-name }}
+        echo "✓ Pushed infrastructure onboarding branch"
+
+    - name: Create Infrastructure Pull Request
+      id: create-pr
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.gh-token }}
+      run: |
+        cd infra-repo
+        PR_URL=$(gh pr create \
+          --title "feat(infra): onboard ${{ inputs.app-name }} infrastructure" \
+          --body "## Infrastructure Onboarding
+
+**Application:** ${{ inputs.app-name }}  
+**Repository:** ${{ inputs.repo-name }}  
+**Environment:** ${{ inputs.environment }}  
+**Onboarding Type:** Infrastructure CD Setup  
+**Branch:** infra/${{ inputs.environment }}/${{ inputs.app-name }}  
+
+### Generated Resources
+- ECR configuration (ecr.yaml)
+- IAM policies (iam-policy.yaml)
+- IAM roles (iam-role.yaml)
+- Route53 configuration (route53.yaml)
+- S3 configuration (s3.yaml)
+- Secrets Manager configuration (secret-manager.yaml)
+
+### Validation Checklist
+- [ ] Review ECR configuration
+- [ ] Review IAM policies and roles
+- [ ] Review Route53 DNS configuration
+- [ ] Review S3 bucket configuration
+- [ ] Review Secrets Manager configuration
+- [ ] Validate CloudFormation stack definitions
+- [ ] Test infrastructure deployment
+
+**Note:** This PR was automatically generated by the Application Onboarding workflow." \
+          --base "${{ inputs.environment }}" \
+          --head "infra/${{ inputs.environment }}/${{ inputs.app-name }}" \
+          2>&1 || echo "FAILED")
+        
+        echo "pr-url=${PR_URL}" >> $GITHUB_OUTPUT
+        echo "✓ Created Infrastructure PR: ${PR_URL}"
