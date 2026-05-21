@@ -1,5 +1,5 @@
 name: 'Application CI Setup'
-description: 'Setup CI pipeline for API application'
+description: 'Setup CI pipeline for API or UI application'
 
 inputs:
   app-name:
@@ -9,13 +9,13 @@ inputs:
     description: 'Repository name'
     required: true
   environment:
-    description: 'Environment (dev-i, qa-i, stage-i, prod-i)'
+    description: 'Environment (dev, qa, stage, prod)'
     required: true
-  api-branch-name:
-    description: 'API source branch name'
+  branch-name:
+    description: 'Source branch name'
     required: true
-  api-target-branch-name:
-    description: 'API target branch name for PR'
+  target-branch-name:
+    description: 'Target branch name for PR'
     required: true
   templates-path:
     description: 'Path to templates repository'
@@ -23,6 +23,10 @@ inputs:
   gh-token:
     description: 'GitHub token for authentication'
     required: true
+  is-ui:
+    description: 'Is this a UI application setup (true/false)'
+    required: false
+    default: 'false'
 
 outputs:
   pr-url:
@@ -38,98 +42,97 @@ runs:
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-    - name: Checkout application repository
+    - name: Determine app type
+      id: app-type
+      shell: bash
+      run: |
+        if [ "${{ inputs.is-ui }}" = "true" ]; then
+          echo "type=ui" >> $GITHUB_OUTPUT
+          echo "dir=ui-repo" >> $GITHUB_OUTPUT
+          echo "name=${{ inputs.app-name }}-ui" >> $GITHUB_OUTPUT
+        else
+          echo "type=api" >> $GITHUB_OUTPUT
+          echo "dir=app-repo" >> $GITHUB_OUTPUT
+          echo "name=${{ inputs.app-name }}" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Checkout repository
       uses: actions/checkout@v4
       with:
         repository: ${{ github.repository_owner }}/${{ inputs.repo-name }}
-        ref: ${{ inputs.api-branch-name }}
-        path: app-repo
+        ref: ${{ inputs.branch-name }}
+        path: ${{ steps.app-type.outputs.dir }}
         token: ${{ inputs.gh-token }}
 
-    - name: Create API onboarding branch
+    - name: Create onboarding branch
       shell: bash
       run: |
-        cd app-repo
-        git checkout -b onboard/api/${{ inputs.app-name }}
-        echo "✓ Created branch: onboard/api/${{ inputs.app-name }}"
+        cd ${{ steps.app-type.outputs.dir }}
+        git checkout -b onboard/${{ steps.app-type.outputs.type }}/${{ inputs.app-name }}
 
-    - name: Copy API CI template files
+    - name: Copy CI template files
       shell: bash
       run: |
-        cd app-repo
+        cd ${{ steps.app-type.outputs.dir }}
         rsync -av --exclude='.git' ${{ inputs.templates-path }}/template-files/app-ci/ .
-        echo "✓ Copied CI template files"
-        ls -la
 
-    - name: Extract Ruby version from template
+    - name: Extract Ruby version
       id: ruby-version
       shell: bash
       run: |
-        if [ -f "${{ inputs.templates-path }}/template-files/app-ci/.ruby-version" ]; then
-          RUBY_VERSION=$(cat ${{ inputs.templates-path }}/template-files/app-ci/.ruby-version)
-          echo "ruby_version=${RUBY_VERSION}" >> $GITHUB_OUTPUT
-          echo "✓ Ruby version: ${RUBY_VERSION}"
+        RUBY_FILE="${{ steps.app-type.outputs.dir }}/.ruby-version"
+        if [ -f "$RUBY_FILE" ]; then
+          RUBY_VERSION=$(cat "$RUBY_FILE")
         else
-          echo "ruby_version=3.2.0" >> $GITHUB_OUTPUT
-          echo "⚠ Ruby version file not found, using default: 3.2.0"
+          RUBY_VERSION="3.2.0"
         fi
+        echo "ruby_version=${RUBY_VERSION}" >> $GITHUB_OUTPUT
 
-    - name: Replace placeholders in API files
+    - name: Replace placeholders
       shell: bash
       run: |
-        cd app-repo
-        find . -type f \( -name '*.yml' -o -name '*.yaml' -o -name 'Dockerfile' -o -name 'docker-entrypoint' \) -exec sed -i "s|__APP_NAME__|${{ inputs.app-name }}|g" {} +
+        cd ${{ steps.app-type.outputs.dir }}
+        find . -type f \( -name '*.yml' -o -name '*.yaml' -o -name 'Dockerfile' -o -name 'docker-entrypoint' \) -exec sed -i "s|__APP_NAME__|${{ steps.app-type.outputs.name }}|g" {} +
         find . -type f \( -name '*.yml' -o -name '*.yaml' -o -name 'Dockerfile' -o -name 'docker-entrypoint' \) -exec sed -i "s|__REPO_NAME__|${{ inputs.repo-name }}|g" {} +
         find . -type f \( -name '*.yml' -o -name '*.yaml' -o -name 'Dockerfile' -o -name 'docker-entrypoint' \) -exec sed -i "s|__ENVIRONMENT__|${{ inputs.environment }}|g" {} +
         find . -type f \( -name '*.yml' -o -name '*.yaml' -o -name 'Dockerfile' -o -name 'docker-entrypoint' \) -exec sed -i "s|__RUBY_VERSION__|${{ steps.ruby-version.outputs.ruby_version }}|g" {} +
-        echo "✓ Placeholders replaced"
 
-    - name: Commit API CI changes
+    - name: Commit changes
       shell: bash
       run: |
-        cd app-repo
-        git add .
-        git commit -m "feat(ci): onboard ${{ inputs.app-name }} API pipeline" || echo "No changes to commit"
-        echo "✓ Committed API CI changes"
+        cd ${{ steps.app-type.outputs.dir }}
+        git add . && git commit -m "feat(ci): onboard ${{ steps.app-type.outputs.name }} pipeline" || true
 
-    - name: Push API onboarding branch
+    - name: Push onboarding branch
       shell: bash
       run: |
-        cd app-repo
-        git push origin onboard/api/${{ inputs.app-name }}
-        echo "✓ Pushed onboarding branch"
+        cd ${{ steps.app-type.outputs.dir }}
+        git push origin onboard/${{ steps.app-type.outputs.type }}/${{ inputs.app-name }}
 
-    - name: Create API CI Pull Request
+    - name: Create Pull Request
       id: create-pr
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.gh-token }}
       run: |
-        cd app-repo
+        cd ${{ steps.app-type.outputs.dir }}
         PR_URL=$(gh pr create \
-          --title "feat(ci): onboard ${{ inputs.app-name }} API pipeline" \
-          --body "## Application Onboarding - CI Pipeline
-
-**Application:** ${{ inputs.app-name }}  
-**Repository:** ${{ inputs.repo-name }}  
-**Onboarding Type:** Application CI Setup  
-**Branch:** onboard/api/${{ inputs.app-name }}  
-
-### Generated Resources
-- CI Pipeline workflow files
-- Docker configuration
-- Docker entry point script
-
-### Validation Checklist
-- [ ] Review generated CI pipeline workflow
-- [ ] Verify Docker configuration
-- [ ] Verify entry point script
-- [ ] Test CI pipeline execution
-
-**Note:** This PR was automatically generated by the Application Onboarding workflow." \
-          --base "${{ inputs.api-target-branch-name }}" \
-          --head "onboard/api/${{ inputs.app-name }}" \
-          2>&1 || echo "FAILED")
+          --title "feat(ci): onboard ${{ steps.app-type.outputs.name }} pipeline" \
+          --body "## Application Onboarding - CI Pipeline (${{ steps.app-type.outputs.type }})" \
+          --body "**Application:** ${{ steps.app-type.outputs.name }}" \
+          --body "**Repository:** ${{ inputs.repo-name }}" \
+          --body "**Branch:** onboard/${{ steps.app-type.outputs.type }}/${{ inputs.app-name }}" \
+          --body "### Generated Resources" \
+          --body "- CI Pipeline workflow" \
+          --body "- Docker configuration" \
+          --body "- Entry point script" \
+          --body "### Validation Checklist" \
+          --body "- [ ] Review generated pipeline" \
+          --body "- [ ] Verify Docker configuration" \
+          --body "- [ ] Test execution" \
+          --body "*Auto-generated by Application Onboarding workflow*" \
+          --base "${{ inputs.target-branch-name }}" \
+          --head "onboard/${{ steps.app-type.outputs.type }}/${{ inputs.app-name }}" \
+          2>&1)
         
         echo "pr-url=${PR_URL}" >> $GITHUB_OUTPUT
-        echo "✓ Created API CI PR: ${PR_URL}"

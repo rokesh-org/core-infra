@@ -9,7 +9,10 @@ inputs:
     description: 'Repository name'
     required: true
   environment:
-    description: 'Environment (dev-i, qa-i, stage-i, prod-i)'
+    description: 'Environment (dev, qa, stage, prod)'
+    required: true
+  environment-branch:
+    description: 'Environment branch name (dev-i, qa-i, stage-i, prod-i)'
     required: true
   templates-path:
     description: 'Path to templates repository'
@@ -40,102 +43,45 @@ runs:
         path: infra-repo
         token: ${{ inputs.gh-token }}
 
-    - name: Check if infrastructure environment branch exists
-      id: check-infra-branch
+    - name: Ensure and checkout environment branch
       shell: bash
       run: |
         cd infra-repo
-        if git ls-remote --heads origin ${{ inputs.environment }} | grep -q .; then
-          echo "exists=true" >> $GITHUB_OUTPUT
-          echo "✓ Infrastructure environment branch exists: ${{ inputs.environment }}"
-        else
-          echo "exists=false" >> $GITHUB_OUTPUT
-          echo "⚠ Infrastructure environment branch does not exist: ${{ inputs.environment }}"
+        if ! git ls-remote --heads origin ${{ inputs.environment-branch }} | grep -q .; then
+          git checkout -b ${{ inputs.environment-branch }}
+          git push origin ${{ inputs.environment-branch }}
         fi
-
-    - name: Create infrastructure environment branch if not exists
-      if: steps.check-infra-branch.outputs.exists == 'false'
-      shell: bash
-      run: |
-        cd infra-repo
-        git checkout -b ${{ inputs.environment }}
-        git push origin ${{ inputs.environment }}
-        echo "✓ Created infrastructure environment branch: ${{ inputs.environment }}"
-
-    - name: Checkout infrastructure environment branch
-      shell: bash
-      run: |
-        cd infra-repo
         git fetch origin
-        git checkout ${{ inputs.environment }}
-        echo "✓ Checked out infrastructure environment branch"
+        git checkout ${{ inputs.environment-branch }}
 
     - name: Create infrastructure onboarding branch
       shell: bash
       run: |
         cd infra-repo
-        git checkout -b infra/${{ inputs.environment }}/${{ inputs.app-name }}
-        echo "✓ Created branch: infra/${{ inputs.environment }}/${{ inputs.app-name }}"
-
-    - name: Ensure infrastructure directory structure
-      shell: bash
-      run: |
-        cd infra-repo
+        git checkout -b infra/${{ inputs.environment-branch }}/${{ inputs.app-name }}
         mkdir -p iac/aws/us-east-1
-        echo "✓ Ensured directory structure"
 
-    - name: Process infrastructure templates
+    - name: Process infrastructure templates and placeholders
       shell: bash
       run: |
         cd infra-repo
-        
-        # Define template files to process
         TEMPLATES=("ecr.yaml" "iam-policy.yaml" "iam-role.yaml" "route53.yaml" "s3.yaml" "secret-manager.yaml")
-        
         for template in "${TEMPLATES[@]}"; do
-          source_file="${{ inputs.templates-path }}/template-files/infra-cd/${template}"
-          target_file="iac/aws/us-east-1/${template}"
-          
-          if [ -f "${source_file}" ]; then
-            echo "Processing: ${template}"
-            # Create target file if it doesn't exist
-            if [ ! -f "${target_file}" ]; then
-              cp "${source_file}" "${target_file}"
-            else
-              # Append to target file
-              cat "${source_file}" >> "${target_file}"
-            fi
-          else
-            echo "⚠ Template not found: ${source_file}"
-          fi
+          src="${{ inputs.templates-path }}/template-files/infra-cd/${template}"
+          tgt="iac/aws/us-east-1/${template}"
+          [ -f "${src}" ] && ([ -f "${tgt}" ] && cat "${src}" >> "${tgt}" || cp "${src}" "${tgt}")
         done
-        
-        echo "✓ Processed infrastructure templates"
-
-    - name: Replace placeholders in infrastructure files
-      shell: bash
-      run: |
-        cd infra-repo
         find iac/aws/us-east-1 -type f -name '*.yaml' -exec sed -i "s|__APP_NAME__|${{ inputs.app-name }}|g" {} +
         find iac/aws/us-east-1 -type f -name '*.yaml' -exec sed -i "s|__CF_APP_NAME__|$(echo ${{ inputs.app-name }} | sed 's/-//g')|g" {} +
         find iac/aws/us-east-1 -type f -name '*.yaml' -exec sed -i "s|__ENVIRONMENT__|${{ inputs.environment }}|g" {} +
         find iac/aws/us-east-1 -type f -name '*.yaml' -exec sed -i "s|__REPO_NAME__|${{ inputs.repo-name }}|g" {} +
-        echo "✓ Placeholders replaced in infrastructure files"
 
-    - name: Commit infrastructure changes
+    - name: Commit and push infrastructure changes
       shell: bash
       run: |
         cd infra-repo
-        git add .
-        git commit -m "feat(infra): onboard ${{ inputs.app-name }} infrastructure" || echo "No changes to commit"
-        echo "✓ Committed infrastructure changes"
-
-    - name: Push infrastructure onboarding branch
-      shell: bash
-      run: |
-        cd infra-repo
-        git push origin infra/${{ inputs.environment }}/${{ inputs.app-name }}
-        echo "✓ Pushed infrastructure onboarding branch"
+        git add . && git commit -m "feat(infra): onboard ${{ inputs.app-name }} infrastructure" || true
+        git push origin infra/${{ inputs.environment-branch }}/${{ inputs.app-name }}
 
     - name: Create Infrastructure Pull Request
       id: create-pr
@@ -150,9 +96,9 @@ runs:
 
 **Application:** ${{ inputs.app-name }}  
 **Repository:** ${{ inputs.repo-name }}  
-**Environment:** ${{ inputs.environment }}  
+**Environment:** ${{ inputs.environment-branch }}  
 **Onboarding Type:** Infrastructure CD Setup  
-**Branch:** infra/${{ inputs.environment }}/${{ inputs.app-name }}  
+**Branch:** infra/${{ inputs.environment-branch }}/${{ inputs.app-name }}  
 
 ### Generated Resources
 - ECR configuration (ecr.yaml)
@@ -172,8 +118,8 @@ runs:
 - [ ] Test infrastructure deployment
 
 **Note:** This PR was automatically generated by the Application Onboarding workflow." \
-          --base "${{ inputs.environment }}" \
-          --head "infra/${{ inputs.environment }}/${{ inputs.app-name }}" \
+          --base "${{ inputs.environment-branch }}" \
+          --head "infra/${{ inputs.environment-branch }}/${{ inputs.app-name }}" \
           2>&1 || echo "FAILED")
         
         echo "pr-url=${PR_URL}" >> $GITHUB_OUTPUT
