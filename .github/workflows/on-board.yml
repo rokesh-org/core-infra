@@ -111,7 +111,7 @@ jobs:
           branch-name: ${{ github.event.inputs.APIBranchName }}
           target-branch-name: ${{ github.event.inputs.APITargetBranchName }}
           templates-path: ${{ github.workspace }}/templates-repo
-          gh-token: ${{ secrets.GITHUB_TOKEN }}
+          gh-token: ${{ secrets.GIT_ACCESS_TOKEN }}
 
   # Job 1B: Application CI UI Onboard (Optional)
   app-ci-ui-job:
@@ -137,7 +137,7 @@ jobs:
           branch-name: ${{ github.event.inputs.UIBranchName }}
           target-branch-name: ${{ github.event.inputs.UITargetBranchName }}
           templates-path: ${{ github.workspace }}/templates-repo
-          gh-token: ${{ secrets.GITHUB_TOKEN }}
+          gh-token: ${{ secrets.GIT_ACCESS_TOKEN }}
           is-ui: 'true'
 
   # Job 2: Application CD Onboard
@@ -163,7 +163,7 @@ jobs:
           environment: ${{ github.event.inputs.Environment }}
           environment-branch: ${{ github.event.inputs.EnvironmentBranch }}
           templates-path: ${{ github.workspace }}/templates-repo
-          gh-token: ${{ secrets.GITHUB_TOKEN }}
+          gh-token: ${{ secrets.GIT_ACCESS_TOKEN }}
 
   # Job 3: Infrastructure CD Onboard
   infra-cd-job:
@@ -188,7 +188,7 @@ jobs:
           environment: ${{ github.event.inputs.Environment }}
           environment-branch: ${{ github.event.inputs.EnvironmentBranch }}
           templates-path: ${{ github.workspace }}/templates-repo
-          gh-token: ${{ secrets.GITHUB_TOKEN }}
+          gh-token: ${{ secrets.GIT_ACCESS_TOKEN }}
 
   # Summary Job
   onboarding-summary:
