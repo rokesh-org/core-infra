@@ -14,3 +14,17 @@ Resources:
           Value: dev
         - Key: ManagedBy
           Value: CloudFormation
+
+  # ── sampleservice ECR Stack ─────────────────────────────────────────
+  sampleserviceECRStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://rpx.cf.ecs.template.nonprod.s3.us-east-1.amazonaws.com/templates/ecr.yaml
+      Parameters:
+        Environment: dev
+        RepoName: sample-service
+      Tags:
+        - Key: Environment
+          Value: dev
+        - Key: ManagedBy
+          Value: CloudFormation
