@@ -62,21 +62,20 @@ runs:
         rm -rf ./* ./.*  2>/dev/null || true
         rsync -av --exclude='.git' ${{ inputs.templates-path }}/template-files/app-cd/ .
 
-    - name: Replace placeholders and commit
+    - name: Replace placeholders and create Pull Request
+      id: create-pr
       shell: bash
       run: |
         cd app-cd-repo
         find . -type f \( -name '*.yml' -o -name '*.yaml' \) -exec sed -i "s|__APP_NAME__|${{ inputs.app-name }}|g" {} +
         find . -type f \( -name '*.yml' -o -name '*.yaml' \) -exec sed -i "s|__REPO_NAME__|${{ inputs.repo-name }}|g" {} +
         find . -type f \( -name '*.yml' -o -name '*.yaml' \) -exec sed -i "s|__ENVIRONMENT__|${{ inputs.environment }}|g" {} +
-        git add . && git commit -m "feat(cd): onboard ${{ inputs.app-name }} deployment" || true
-        git push origin ${{ inputs.environment-branch }}-on-board
 
-    - name: Create CD Pull Request
-      id: create-pr
+    - name: Commit and Create Pull Request
       uses: peter-evans/create-pull-request@v7
       with:
         token: ${{ inputs.gh-token }}
+        path: app-cd-repo
         base: ${{ inputs.environment-branch }}
         branch: ${{ inputs.environment-branch }}-on-board
         delete-branch: true

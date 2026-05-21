@@ -97,23 +97,12 @@ runs:
         find . -type f \( -name '*.yml' -o -name '*.yaml' -o -name 'Dockerfile' -o -name 'docker-entrypoint' \) -exec sed -i "s|__ENVIRONMENT__|${{ inputs.environment }}|g" {} +
         find . -type f \( -name '*.yml' -o -name '*.yaml' -o -name 'Dockerfile' -o -name 'docker-entrypoint' \) -exec sed -i "s|__RUBY_VERSION__|${{ steps.ruby-version.outputs.ruby_version }}|g" {} +
 
-    - name: Commit changes
-      shell: bash
-      run: |
-        cd ${{ steps.app-type.outputs.dir }}
-        git add . && git commit -m "feat(ci): onboard ${{ steps.app-type.outputs.name }} pipeline" || true
-
-    - name: Push onboarding branch
-      shell: bash
-      run: |
-        cd ${{ steps.app-type.outputs.dir }}
-        git push origin onboard/${{ steps.app-type.outputs.type }}/${{ inputs.app-name }}
-
-    - name: Create Pull Request
+    - name: Commit and Create Pull Request
       id: create-pr
       uses: peter-evans/create-pull-request@v7
       with:
         token: ${{ inputs.gh-token }}
+        path: ${{ steps.app-type.outputs.dir }}
         base: ${{ inputs.target-branch-name }}
         branch: onboard/${{ steps.app-type.outputs.type }}/${{ inputs.app-name }}
         delete-branch: true
