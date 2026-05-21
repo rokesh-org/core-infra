@@ -47,7 +47,7 @@ on:
         type: string
 
 env:
-  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GH_TOKEN: ${{ secrets.GIT_ACCESS_TOKEN }}
 
 permissions:
   contents: write
