@@ -76,22 +76,17 @@ runs:
         find iac/aws/us-east-1 -type f -name '*.yaml' -exec sed -i "s|__ENVIRONMENT__|${{ inputs.environment }}|g" {} +
         find iac/aws/us-east-1 -type f -name '*.yaml' -exec sed -i "s|__REPO_NAME__|${{ inputs.repo-name }}|g" {} +
 
-    - name: Commit and push changes
-      shell: bash
-      run: |
-        cd infra-repo
-        git add .
-        git commit -m "feat(infra): onboard ${{ inputs.app-name }} infrastructure" || true
-        git push origin infra/${{ inputs.environment-branch }}/${{ inputs.app-name }}
-
     - name: Create Pull Request
       id: create-pr
       uses: peter-evans/create-pull-request@v7
       with:
         token: ${{ inputs.gh-token }}
+        path: infra-repo
         base: ${{ inputs.environment-branch }}
         branch: infra/${{ inputs.environment-branch }}/${{ inputs.app-name }}
         delete-branch: true
+        commit-message: |
+          feat(infra): onboard ${{ inputs.app-name }} infrastructure
         title: "feat(infra): onboard ${{ inputs.app-name }} infrastructure"
         body: |
           ## Infrastructure Onboarding

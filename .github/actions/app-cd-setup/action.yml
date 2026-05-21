@@ -70,22 +70,17 @@ runs:
         find . -type f \( -name '*.yml' -o -name '*.yaml' \) -exec sed -i "s|__REPO_NAME__|${{ inputs.repo-name }}|g" {} +
         find . -type f \( -name '*.yml' -o -name '*.yaml' \) -exec sed -i "s|__ENVIRONMENT__|${{ inputs.environment }}|g" {} +
 
-    - name: Commit and push changes
-      shell: bash
-      run: |
-        cd app-cd-repo
-        git add .
-        git commit -m "feat(cd): onboard ${{ inputs.app-name }} deployment" || true
-        git push origin ${{ inputs.environment-branch }}-on-board
-
     - name: Create Pull Request
       id: create-pr
       uses: peter-evans/create-pull-request@v7
       with:
         token: ${{ inputs.gh-token }}
+        path: app-cd-repo
         base: ${{ inputs.environment-branch }}
         branch: ${{ inputs.environment-branch }}-on-board
         delete-branch: true
+        commit-message: |
+          feat(cd): onboard ${{ inputs.app-name }} deployment
         title: "feat(cd): onboard ${{ inputs.app-name }} into ${{ inputs.environment-branch }}"
         body: |
           ## Application Onboarding - CD Pipeline
