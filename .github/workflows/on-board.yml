@@ -75,6 +75,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: templates-repo
+          repository: rokesh-org/core-infra
 
       - name: Check template directory exists
         run: |
@@ -95,6 +96,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: templates-repo
+          repository: rokesh-org/core-infra
 
       - name: Setup API CI
         id: setup-api
@@ -120,6 +122,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: templates-repo
+          repository: rokesh-org/core-infra
 
       - name: Setup UI CI
         id: setup-ui
@@ -146,6 +149,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: templates-repo
+          repository: rokesh-org/core-infra
 
       - name: Setup Application CD
         id: setup-cd
@@ -170,6 +174,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: templates-repo
+          repository: rokesh-org/core-infra
 
       - name: Setup Infrastructure CD
         id: setup-infra
