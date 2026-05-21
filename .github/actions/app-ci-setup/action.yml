@@ -63,7 +63,6 @@ runs:
         ref: ${{ inputs.branch-name }}
         path: ${{ steps.app-type.outputs.dir }}
         token: ${{ inputs.gh-token }}
-        persist-credentials: false
 
     - name: Create onboarding branch
       shell: bash

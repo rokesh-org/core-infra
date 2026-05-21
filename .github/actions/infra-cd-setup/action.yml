@@ -38,11 +38,10 @@ runs:
     - name: Checkout core_infrastructure repository
       uses: actions/checkout@v4
       with:
-        repository: ${{ github.repository_owner }}/core_infrastructure
+        repository: ${{ github.repository_owner }}/core_infra
         ref: main
         path: infra-repo
         token: ${{ inputs.gh-token }}
-        persist-credentials: false
 
     - name: Ensure and checkout environment branch
       shell: bash
