@@ -86,10 +86,10 @@ runs:
       shell: bash
       run: |
         cd ${{ steps.app-type.outputs.dir }}
-        find . -type f \( -name '*.yml' -o -name '*.yaml' -o -name 'Dockerfile' -o -name 'docker-entrypoint' \) -exec sed -i "s|__APP_NAME__|${{ steps.app-type.outputs.name }}|g" {} +
-        find . -type f \( -name '*.yml' -o -name '*.yaml' -o -name 'Dockerfile' -o -name 'docker-entrypoint' \) -exec sed -i "s|__REPO_NAME__|${{ inputs.repo-name }}|g" {} +
-        find . -type f \( -name '*.yml' -o -name '*.yaml' -o -name 'Dockerfile' -o -name 'docker-entrypoint' \) -exec sed -i "s|__ENVIRONMENT__|${{ inputs.environment }}|g" {} +
-        find . -type f \( -name '*.yml' -o -name '*.yaml' -o -name 'Dockerfile' -o -name 'docker-entrypoint' \) -exec sed -i "s|__RUBY_VERSION__|${{ steps.ruby-version.outputs.ruby_version }}|g" {} +
+        find . -type f \( -name '*.yml' -o -name '*.yaml' -o -name 'Dockerfile' -o -name 'docker-entrypoint' -o -name 'nginx.conf' \) -exec sed -i "s|__APP_NAME__|${{ steps.app-type.outputs.name }}|g" {} +
+        find . -type f \( -name '*.yml' -o -name '*.yaml' -o -name 'Dockerfile' -o -name 'docker-entrypoint' -o -name 'nginx.conf' \) -exec sed -i "s|__REPO_NAME__|${{ inputs.repo-name }}|g" {} +
+        find . -type f \( -name '*.yml' -o -name '*.yaml' -o -name 'Dockerfile' -o -name 'docker-entrypoint' -o -name 'nginx.conf' \) -exec sed -i "s|__ENVIRONMENT__|${{ inputs.environment }}|g" {} +
+        find . -type f \( -name '*.yml' -o -name '*.yaml' -o -name 'Dockerfile' -o -name 'docker-entrypoint' -o -name 'nginx.conf' \) -exec sed -i "s|__RUBY_VERSION__|${{ steps.ruby-version.outputs.ruby_version }}|g" {} +
         find . -type f \( -name '*.yml' -o -name '*.yaml' \) -exec sed -i "s|__TYPE__|${{ steps.app-type.outputs.type }}|g" {} +
 
     - name: Create Pull Request

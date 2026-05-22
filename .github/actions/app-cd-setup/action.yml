@@ -69,6 +69,9 @@ runs:
         find . -type f \( -name '*.yml' -o -name '*.yaml' \) -exec sed -i "s|__APP_NAME__|${{ inputs.app-name }}|g" {} +
         find . -type f \( -name '*.yml' -o -name '*.yaml' \) -exec sed -i "s|__REPO_NAME__|${{ inputs.repo-name }}|g" {} +
         find . -type f \( -name '*.yml' -o -name '*.yaml' \) -exec sed -i "s|__ENVIRONMENT__|${{ inputs.environment }}|g" {} +
+        find . -type f \( -name '*.yml' -o -name '*.yaml' \) -exec sed -i "s|__CF_APP_NAME__|$(echo ${{ inputs.app-name }} | sed 's/-//g' | sed 's/^./\U&/')|g" {} +
+        find . -name '*api*' -type f \( -name '*.yml' -o -name '*.yaml' \) -exec sed -i "s|__TYPE__|api|g" {} +
+        find . -name '*ui*' -type f \( -name '*.yml' -o -name '*.yaml' \) -exec sed -i "s|__TYPE__|ui|g" {} +
 
     - name: Create Pull Request
       id: create-pr

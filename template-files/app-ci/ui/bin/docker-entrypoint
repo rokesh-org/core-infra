@@ -23,8 +23,8 @@ export API_BASE
 echo "[entrypoint] Exported: API_BASE"
 
 echo "[entrypoint] Waiting for Service Connect to be ready..."
-until nc -z newsroom-api 9202 2>/dev/null; do
-  echo "[entrypoint] newsroom-api:9202 not yet reachable, retrying in 2s..."
+until nc -z __APP_NAME__-api 3000 2>/dev/null; do
+  echo "[entrypoint] __APP_NAME__-api:3000 not yet reachable, retrying in 2s..."
   sleep 2
 done
 
