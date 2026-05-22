@@ -35,7 +35,7 @@ Parameters:
   HealthCheckHttpCode:
     Type: String
     Default: '200'  
-  __APP_NAME__IAMRoleArn:
+  __CF_APP_NAME__IAMRoleArn:
     Type: String
     Default: '{{resolve:ssm:/cfn/__ENVIRONMENT__/iam/__APP_NAME__/TaskRoleArn:1}}'
   ExecutionRoleArn:
@@ -82,7 +82,7 @@ Parameters:
 # ─── Resources ────────────────────────────────────────────────────────────────
 Resources:
   # ─────── Task Definition ───────────────
-  __APP_NAME____TYPE__TaskDefStack:
+  __CF_APP_NAME____TYPE__TaskDefStack:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: !Sub '${TemplateBucketUrl}/task-definition.yaml'
@@ -93,13 +93,13 @@ Resources:
         ContainerPort: !Ref ContainerPort
         TaskCPU: !Ref TaskCPU
         TaskMemory: !Ref TaskMemory
-        TaskRoleArn: !Ref __APP_NAME__IAMRoleArn
+        TaskRoleArn: !Ref __CF_APP_NAME__IAMRoleArn
         ExecutionRoleArn: !Ref ExecutionRoleArn
 
   # ─────── ECS Service ──────────────
-  __APP_NAME__ECSServiceStack:
+  __CF_APP_NAME__ECSServiceStack:
     Type: AWS::CloudFormation::Stack
-    DependsOn: __APP_NAME____TYPE__TaskDefStack
+    DependsOn: __CF_APP_NAME____TYPE__TaskDefStack
     Properties:
       TemplateURL: !Sub '${TemplateBucketUrl}/ecs-service-rolling-update.yaml'
       Parameters:
@@ -107,7 +107,7 @@ Resources:
         AppName: !Ref AppName
         ECSClusterName: !Ref ECSClusterName
         Namespace: !Ref Namespace
-        TaskDefinitionArn: !GetAtt __APP_NAME____TYPE__TaskDefStack.Outputs.TaskDefinitionArn
+        TaskDefinitionArn: !GetAtt __CF_APP_NAME____TYPE__TaskDefStack.Outputs.TaskDefinitionArn
         VpcId: !Ref VpcId
         VpcSubnetIds: !Sub '${PrivateSubnet1},${PrivateSubnet2}'
         SecurityGroupIds: !Ref SecurityGroupId

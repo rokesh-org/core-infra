@@ -193,13 +193,14 @@ jobs:
   # Summary Job
   onboarding-summary:
     name: Onboarding Summary
-    needs: [app-ci-job, app-cd-job, infra-cd-job]
+    needs: [app-ci-job, app-ci-ui-job, app-cd-job, infra-cd-job]
     runs-on: ubuntu-latest
     if: always()
     steps:
       - name: Print Onboarding Summary
         env:
           API_PR: ${{ needs.app-ci-job.outputs.api-pr-url }}
+          UI_PR: ${{ needs.app-ci-ui-job.outputs.ui-pr-url }}
           CD_PR: ${{ needs.app-cd-job.outputs.cd-pr-url }}
           INFRA_PR: ${{ needs.infra-cd-job.outputs.infra-pr-url }}
         run: |
@@ -208,7 +209,15 @@ jobs:
           echo ""
           echo "📤 Pull Requests:"
           echo "  • API CI: ${API_PR}"
+          if [ ! -z "${UI_PR}" ] && [ "${UI_PR}" != "null" ]; then
+            echo "  • UI CI: ${UI_PR}"
+          fi
           echo "  • App CD: ${CD_PR}"
           echo "  • Infrastructure: ${INFRA_PR}"
           echo ""
+
           echo "✅ Next: Review and merge PRs"
+          echo "Order of merge:"
+          echo "1. Infrastructure PR to ensure foundational resources are in place"
+          echo "2. App CI "PRs to set up pipelines (API first, then UI if applicable)"
+          echo "3. App CD PR to set up deployment pipeline"
