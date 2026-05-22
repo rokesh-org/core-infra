@@ -54,3 +54,45 @@ Resources:
         Environment: !Ref Environment
         AppName: function-manager
         ManagedBy: CloudFormation
+  # ── Sampleservice IAM Policy ─────────────────────────────────────────
+  SampleserviceIAMPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub ${Environment}-sample-service-policy
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowReadSecrets
+            Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+              - secretsmanager:DescribeSecret
+            Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${Environment}/sample-service*
+
+          - Sid: AllowS3AccessToAppBucket
+            Effect: Allow
+            Action:
+              - s3:ListBucket
+              - s3:PutObject
+              - s3:GetObject
+              - s3:DeleteObject
+            Resource: !Sub arn:aws:s3:::${Environment}-sample-service*
+
+          - Sid: AllowCloudWatchLogsWrite
+            Effect: Allow
+            Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/ecs/${Environment}/sample-service*
+
+  SSMsample-servicePolicyArn:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /cfn/${Environment}/iam/sample-service/PolicyArn
+      Type: String
+      Value: !Ref SampleserviceIAMPolicy
+      Description: !Sub "[${Environment}] Managed Policy ARN for sample-service"
+      Tags:
+        Environment: !Ref Environment
+        AppName: sample-service
+        ManagedBy: CloudFormation
