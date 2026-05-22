@@ -11,17 +11,8 @@ on:
         description: 'Application name'
         required: true
         type: string
-      Environment:
-        description: 'Environment (dev, qa, stage, prod)'
-        required: true
-        type: choice
-        options:
-          - dev
-          - qa
-          - stage
-          - prod      
       EnvironmentBranch:
-        description: 'Environment (dev-i, qa-i, stage-i, prod-i)'
+        description: 'Environment branch (dev-i, qa-i, stage-i, prod-i)'
         required: true
         type: choice
         options:
@@ -30,24 +21,17 @@ on:
           - stage-i
           - prod-i
       APIBranchName:
-        description: 'API branch name (source branch for API CI)'
-        required: true
-        type: string
-      APITargetBranchName:
-        description: 'API target branch name (target branch for API CI PR)'
+        description: 'API branch name'
         required: true
         type: string
       UIBranchName:
-        description: 'UI branch name (source branch for UI CI, optional)'
-        required: false
-        type: string
-      UITargetBranchName:
-        description: 'UI target branch name (target branch for UI CI PR, optional)'
+        description: 'UI branch name (optional)'
         required: false
         type: string
 
 env:
   GH_TOKEN: ${{ secrets.GIT_ACCESS_TOKEN }}
+  ENVIRONMENT: ${{ format('{0}', github.event.inputs.EnvironmentBranch) }}
 
 permissions:
   contents: write
@@ -91,7 +75,15 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       api-pr-url: ${{ steps.setup-api.outputs.pr-url }}
+    env:
+      ENVIRONMENT: ${{ format('{0}', github.event.inputs.EnvironmentBranch) }}
     steps:
+      - name: Extract environment from branch
+        id: extract-env
+        run: |
+          ENV_NAME=$(echo ${{ env.ENVIRONMENT }} | sed 's/-i$//')
+          echo "environment=${ENV_NAME}" >> $GITHUB_OUTPUT
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -107,9 +99,9 @@ jobs:
         with:
           app-name: ${{ github.event.inputs.AppName }}
           repo-name: ${{ github.event.inputs.RepoName }}
-          environment: ${{ github.event.inputs.Environment }}
+          environment: ${{ steps.extract-env.outputs.environment }}
           branch-name: ${{ github.event.inputs.APIBranchName }}
-          target-branch-name: ${{ github.event.inputs.APITargetBranchName }}
+          target-branch-name: ${{ github.event.inputs.APIBranchName }}
           templates-path: ${{ github.workspace }}/templates-repo
           gh-token: ${{ secrets.GIT_ACCESS_TOKEN }}
 
@@ -120,7 +112,15 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       ui-pr-url: ${{ steps.setup-ui.outputs.pr-url }}
+    env:
+      ENVIRONMENT: ${{ format('{0}', github.event.inputs.EnvironmentBranch) }}
     steps:
+      - name: Extract environment from branch
+        id: extract-env
+        run: |
+          ENV_NAME=$(echo ${{ env.ENVIRONMENT }} | sed 's/-i$//')
+          echo "environment=${ENV_NAME}" >> $GITHUB_OUTPUT
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -133,9 +133,9 @@ jobs:
         with:
           app-name: ${{ github.event.inputs.AppName }}
           repo-name: ${{ github.event.inputs.RepoName }}
-          environment: ${{ github.event.inputs.Environment }}
+          environment: ${{ steps.extract-env.outputs.environment }}
           branch-name: ${{ github.event.inputs.UIBranchName }}
-          target-branch-name: ${{ github.event.inputs.UITargetBranchName }}
+          target-branch-name: ${{ github.event.inputs.UIBranchName }}
           templates-path: ${{ github.workspace }}/templates-repo
           gh-token: ${{ secrets.GIT_ACCESS_TOKEN }}
           is-ui: 'true'
@@ -147,7 +147,15 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       cd-pr-url: ${{ steps.setup-cd.outputs.pr-url }}
+    env:
+      ENVIRONMENT: ${{ format('{0}', github.event.inputs.EnvironmentBranch) }}
     steps:
+      - name: Extract environment from branch
+        id: extract-env
+        run: |
+          ENV_NAME=$(echo ${{ env.ENVIRONMENT }} | sed 's/-i$//')
+          echo "environment=${ENV_NAME}" >> $GITHUB_OUTPUT
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -160,7 +168,7 @@ jobs:
         with:
           app-name: ${{ github.event.inputs.AppName }}
           repo-name: ${{ github.event.inputs.RepoName }}
-          environment: ${{ github.event.inputs.Environment }}
+          environment: ${{ steps.extract-env.outputs.environment }}
           environment-branch: ${{ github.event.inputs.EnvironmentBranch }}
           templates-path: ${{ github.workspace }}/templates-repo
           gh-token: ${{ secrets.GIT_ACCESS_TOKEN }}
@@ -172,7 +180,15 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       infra-pr-url: ${{ steps.setup-infra.outputs.pr-url }}
+    env:
+      ENVIRONMENT: ${{ format('{0}', github.event.inputs.EnvironmentBranch) }}
     steps:
+      - name: Extract environment from branch
+        id: extract-env
+        run: |
+          ENV_NAME=$(echo ${{ env.ENVIRONMENT }} | sed 's/-i$//')
+          echo "environment=${ENV_NAME}" >> $GITHUB_OUTPUT
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -185,7 +201,7 @@ jobs:
         with:
           app-name: ${{ github.event.inputs.AppName }}
           repo-name: ${{ github.event.inputs.RepoName }}
-          environment: ${{ github.event.inputs.Environment }}
+          environment: ${{ steps.extract-env.outputs.environment }}
           environment-branch: ${{ github.event.inputs.EnvironmentBranch }}
           templates-path: ${{ github.workspace }}/templates-repo
           gh-token: ${{ secrets.GIT_ACCESS_TOKEN }}
