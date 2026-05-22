@@ -219,5 +219,6 @@ jobs:
           echo "✅ Next: Review and merge PRs"
           echo "Order of merge:"
           echo "1. Infrastructure PR to ensure foundational resources are in place"
-          echo "2. App CI "PRs to set up pipelines (API first, then UI if applicable)"
+          echo "   - Go to AWS Secret Manager and add the secret to ${{ github.event.inputs.Environment }}/${{ github.event.inputs.AppName }}"
+          echo "2. App CI PR to set up pipelines (API first, then UI if applicable) and validate docker images are built successfully"
           echo "3. App CD PR to set up deployment pipeline"

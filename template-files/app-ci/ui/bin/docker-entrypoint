@@ -1,0 +1,32 @@
+#!/bin/sh
+set -e
+
+AWS_REGION="${AWS_REGION:-us-east-1}"
+SECRET_NAME="__ENVIRONMENT__/__APP_NAME__"
+
+echo "[entrypoint] Loading config from Secrets Manager: ${SECRET_NAME}"
+
+json=$(aws secretsmanager get-secret-value \
+  --secret-id "${SECRET_NAME}" \
+  --region "${AWS_REGION}" \
+  --query 'SecretString' \
+  --output text)
+
+API_BASE=$(echo "$json" | jq -r '.API_BASE')
+
+if [ -z "$API_BASE" ] || [ "$API_BASE" = "null" ]; then
+  echo "[entrypoint] ERROR: API_BASE not found in secret '${SECRET_NAME}'"
+  exit 1
+fi
+
+export API_BASE
+echo "[entrypoint] Exported: API_BASE"
+
+echo "[entrypoint] Waiting for Service Connect to be ready..."
+until nc -z newsroom-api 9202 2>/dev/null; do
+  echo "[entrypoint] newsroom-api:9202 not yet reachable, retrying in 2s..."
+  sleep 2
+done
+
+echo "[entrypoint] Service Connect ready. Starting nginx..."
+exec nginx -g 'daemon off;'

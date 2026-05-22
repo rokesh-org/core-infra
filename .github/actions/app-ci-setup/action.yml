@@ -68,7 +68,7 @@ runs:
       shell: bash
       run: |
         cd ${{ steps.app-type.outputs.dir }}
-        rsync -av --exclude='.git' ${{ inputs.templates-path }}/template-files/app-ci/ .
+        rsync -av --exclude='.git' ${{ inputs.templates-path }}/template-files/app-ci/${{ steps.app-type.outputs.type }}/ .
 
     - name: Extract Ruby version
       id: ruby-version
