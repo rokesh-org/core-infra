@@ -60,7 +60,7 @@ runs:
         cd app-cd-repo
         find . -maxdepth 1 -type f ! -name '.gitignore' -delete
         find . -maxdepth 1 -type d ! -name '.' ! -name '..' ! -name '.git' -exec rm -rf {} + 2>/dev/null || true
-        rsync -av --exclude='.git' ${{ inputs.templates-path }}/template-files/app-cd/ .
+        rsync -av --exclude='.git' ${{ inputs.templates-path }}/templates/app-cd/ .
 
     - name: Replace placeholders
       shell: bash

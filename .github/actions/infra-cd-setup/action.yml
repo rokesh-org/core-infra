@@ -67,7 +67,7 @@ runs:
         cd infra-repo
         TEMPLATES=("ecr.yaml" "iam-policy.yaml" "iam-role.yaml" "route53.yaml" "s3.yaml" "secret-manager.yaml")
         for template in "${TEMPLATES[@]}"; do
-          src="${{ inputs.templates-path }}/template-files/infra-cd/${template}"
+          src="${{ inputs.templates-path }}/templates/infra-cd/${template}"
           tgt="iac/aws/us-east-1/${template}"
           [ -f "${src}" ] && ([ -f "${tgt}" ] && cat "${src}" >> "${tgt}" || cp "${src}" "${tgt}")
         done

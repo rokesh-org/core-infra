@@ -63,8 +63,8 @@ jobs:
 
       - name: Check template directory exists
         run: |
-          if [ ! -d "templates-repo/template-files" ]; then
-            echo "✗ Template directory not found: templates-repo/template-files"
+          if [ ! -d "templates-repo/templates" ]; then
+            echo "✗ Template directory not found: templates-repo/templates"
             exit 1
           fi
           echo "✓ Template directory found"
